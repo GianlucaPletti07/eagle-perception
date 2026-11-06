@@ -7,8 +7,11 @@
 #include <Eigen/Geometry>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_msgs/msg/header.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+
+#include "lidar_odometry/preprocessing.hpp"
 
 namespace lidar_odometry
 {
@@ -25,13 +28,20 @@ private:
   /// Caches the fixed sensor mounting from /tf_static. Returns false until it is available.
   bool ensureSensorExtrinsics(const std::string & sensor_frame);
 
+  CropParameters loadCropParameters();
+  void publishFilteredCloud(const Cloud & cloud, const std_msgs::msg::Header & scan_header);
+
   std::string base_frame_;
+  CropParameters crop_params_;
+  double voxel_leaf_size_;
+  bool publish_filtered_cloud_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::optional<Eigen::Isometry3d> base_from_sensor_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr scan_subscription_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_cloud_publisher_;
 };
 
-}  // namespace lidar_odometry 
+}  // namespace lidar_odometry

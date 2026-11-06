@@ -4,3 +4,15 @@ lidar_odometry:
     # Scans kept in the subscription queue if processing falls behind.
     scan_queue_depth: 10
     base_frame: base_link
+
+    # Publish the preprocessed scan for inspection in RViz. Disable it when measuring timing.
+    publish_filtered_cloud: true
+
+    # All distances in metres, in the base_link frame (rear axle, on the ground).
+    preprocessing:
+      # Returns beyond this horizontal distance are sparse and noisy.
+      max_range: 40.0
+      # The ground is flat at z = 0; this margin absorbs sensor noise.
+      ground_max_height: 0.10
+      # Edge of the cubes used to thin the cloud.
+      voxel_leaf_size: 0.2
