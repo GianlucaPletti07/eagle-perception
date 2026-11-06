@@ -1,10 +1,23 @@
 #include "lidar_odometry/lidar_odometry_node.hpp"
 
+#include <chrono>
+
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 namespace lidar_odometry
 {
+namespace
+{
+
+using Clock = std::chrono::steady_clock;
+
+double millisecondsBetween(Clock::time_point from, Clock::time_point to)
+{
+  return std::chrono::duration<double, std::milli>(to - from).count();
+}
+
+}  // namespace
 
 LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
 : Node("lidar_odometry", options)
@@ -22,6 +35,8 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
   // Debug output: only the most recent filtered cloud is worth showing.
   filtered_cloud_publisher_ =
     create_publisher<sensor_msgs::msg::PointCloud2>("~/filtered_points", 1);
+  processing_time_publisher_ =
+    create_publisher<lidar_odometry_msgs::msg::ProcessingTime>("~/processing_time", 10);
 
   // Scans are large: with a best-effort subscription most of them would be silently lost.
   const auto qos = rclcpp::QoS(rclcpp::KeepLast(static_cast<size_t>(scan_queue_depth))).reliable();
@@ -32,6 +47,7 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
 
 void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & scan)
 {
+  const auto start = Clock::now();
   if (!ensureSensorExtrinsics(scan->header.frame_id)) {
     return;
   }
@@ -40,10 +56,20 @@ void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedP
   pcl::fromROSMsg(*scan, raw_scan);
   const Cloud::Ptr filtered_scan =
     downsample(cropToVehicleFrame(raw_scan, *base_from_sensor_, crop_params_), voxel_leaf_size_);
+  const auto preprocessing_end = Clock::now();
 
   if (publish_filtered_cloud_) {
     publishFilteredCloud(*filtered_scan, scan->header);
   }
+
+  lidar_odometry_msgs::msg::ProcessingTime timing;
+  timing.header.stamp = scan->header.stamp;
+  timing.header.frame_id = base_frame_;
+  timing.preprocessing_ms = millisecondsBetween(start, preprocessing_end);
+  timing.input_points = static_cast<uint32_t>(raw_scan.size());
+  timing.filtered_points = static_cast<uint32_t>(filtered_scan->size());
+  timing.total_ms = millisecondsBetween(start, Clock::now());
+  processing_time_publisher_->publish(timing);
 }
 
 bool LidarOdometryNode::ensureSensorExtrinsics(const std::string & sensor_frame)

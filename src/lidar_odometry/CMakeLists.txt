@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 project(lidar_odometry)
 
+# Timings are only meaningful with optimizations: default to Release unless told otherwise.
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -15,6 +20,7 @@ find_package(tf2_eigen REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters)
+find_package(lidar_odometry_msgs REQUIRED)
 
 add_executable(lidar_odometry_node
   src/main.cpp
@@ -34,6 +40,7 @@ ament_target_dependencies(lidar_odometry_node
   tf2_ros
   tf2_eigen
   pcl_conversions
+  lidar_odometry_msgs
 )
 target_link_libraries(lidar_odometry_node
   Eigen3::Eigen
