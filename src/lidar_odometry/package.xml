@@ -17,6 +17,7 @@
   <depend>pcl_conversions</depend>
   <depend>libpcl-all-dev</depend>
   <depend>lidar_odometry_msgs</depend>
+  <depend>nav_msgs</depend>
   
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

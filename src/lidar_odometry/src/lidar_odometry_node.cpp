@@ -1,6 +1,7 @@
 #include "lidar_odometry/lidar_odometry_node.hpp"
 
 #include <chrono>
+#include <cstddef>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -25,13 +26,19 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
   const auto input_topic = declare_parameter<std::string>("input_topic");
   const auto scan_queue_depth = declare_parameter<int>("scan_queue_depth");
   base_frame_ = declare_parameter<std::string>("base_frame");
+  odom_frame_ = declare_parameter<std::string>("odom_frame");
   crop_params_ = loadCropParameters();
   voxel_leaf_size_ = declare_parameter<double>("preprocessing.voxel_leaf_size");
   publish_filtered_cloud_ = declare_parameter<bool>("publish_filtered_cloud");
 
+  odometry_ = std::make_unique<ScanToMapOdometry>(
+    loadRegistrationParameters(), loadLocalMapParameters());
+
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
+  odometry_publisher_ = create_publisher<nav_msgs::msg::Odometry>("odometry", 10);
   // Debug output: only the most recent filtered cloud is worth showing.
   filtered_cloud_publisher_ =
     create_publisher<sensor_msgs::msg::PointCloud2>("~/filtered_points", 1);
@@ -58,6 +65,13 @@ void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedP
     downsample(cropToVehicleFrame(raw_scan, *base_from_sensor_, crop_params_), voxel_leaf_size_);
   const auto preprocessing_end = Clock::now();
 
+  const RegistrationResult registration = odometry_->update(filtered_scan);
+  const auto registration_end = Clock::now();
+  if (!registration.converged) {
+    RCLCPP_WARN(get_logger(), "ICP did not converge, keeping the predicted pose");
+  }
+
+  publishOdometry(scan->header);
   if (publish_filtered_cloud_) {
     publishFilteredCloud(*filtered_scan, scan->header);
   }
@@ -66,6 +80,7 @@ void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedP
   timing.header.stamp = scan->header.stamp;
   timing.header.frame_id = base_frame_;
   timing.preprocessing_ms = millisecondsBetween(start, preprocessing_end);
+  timing.registration_ms = millisecondsBetween(preprocessing_end, registration_end);
   timing.input_points = static_cast<uint32_t>(raw_scan.size());
   timing.filtered_points = static_cast<uint32_t>(filtered_scan->size());
   timing.total_ms = millisecondsBetween(start, Clock::now());
@@ -102,6 +117,44 @@ CropParameters LidarOdometryNode::loadCropParameters()
   params.max_range = declare_parameter<double>("preprocessing.max_range");
   params.ground_max_height = declare_parameter<double>("preprocessing.ground_max_height");
   return params;
+}
+
+RegistrationParameters LidarOdometryNode::loadRegistrationParameters()
+{
+  RegistrationParameters params;
+  params.max_correspondence_distance =
+    declare_parameter<double>("registration.max_correspondence_distance");
+  params.max_iterations = declare_parameter<int>("registration.max_iterations");
+  params.transformation_epsilon = declare_parameter<double>("registration.transformation_epsilon");
+  return params;
+}
+
+LocalMapParameters LidarOdometryNode::loadLocalMapParameters()
+{
+  LocalMapParameters params;
+  params.keyframe_distance = declare_parameter<double>("local_map.keyframe_distance");
+  params.keyframe_angle = declare_parameter<double>("local_map.keyframe_angle");
+  params.max_keyframes =
+    static_cast<std::size_t>(declare_parameter<int>("local_map.max_keyframes"));
+  params.voxel_leaf_size = declare_parameter<double>("local_map.voxel_leaf_size");
+  return params;
+}
+
+void LidarOdometryNode::publishOdometry(const std_msgs::msg::Header & scan_header)
+{
+  const Eigen::Isometry3d & odom_from_base = odometry_->pose();
+
+  nav_msgs::msg::Odometry odometry;
+  odometry.header.stamp = scan_header.stamp;
+  odometry.header.frame_id = odom_frame_;
+  odometry.child_frame_id = base_frame_;
+  odometry.pose.pose = tf2::toMsg(odom_from_base);
+  odometry_publisher_->publish(odometry);
+
+  geometry_msgs::msg::TransformStamped transform = tf2::eigenToTransform(odom_from_base);
+  transform.header = odometry.header;
+  transform.child_frame_id = base_frame_;
+  tf_broadcaster_->sendTransform(transform);
 }
 
 void LidarOdometryNode::publishFilteredCloud(

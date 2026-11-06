@@ -16,3 +16,20 @@ lidar_odometry:
       ground_max_height: 0.10
       # Edge of the cubes used to thin the cloud.
       voxel_leaf_size: 0.2
+
+    odom_frame: odom
+
+    registration:
+      # Point pairs farther apart (m) are not matched; must exceed the prediction error.
+      max_correspondence_distance: 1.0
+      max_iterations: 30
+      # ICP stops when an iteration changes the pose less than this.
+      transformation_epsilon: 1.0e-6
+
+    local_map:
+      # A scan becomes a keyframe after this travel (m) or rotation (rad, about 10 degrees).
+      keyframe_distance: 1.0
+      keyframe_angle: 0.17
+      # Number of recent keyframes the scans are aligned against.
+      max_keyframes: 20
+      voxel_leaf_size: 0.2

@@ -15,6 +15,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -39,6 +40,7 @@ target_include_directories(lidar_odometry_node SYSTEM PRIVATE
 ament_target_dependencies(lidar_odometry_node
   rclcpp
   sensor_msgs
+  nav_msgs
   tf2_ros
   tf2_eigen
   pcl_conversions
