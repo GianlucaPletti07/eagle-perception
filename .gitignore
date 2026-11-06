@@ -1,0 +1,10 @@
+# colcon build artifacts
+build/
+install/
+log/
+
+# LiDAR recording, too large for git
+bags/
+
+# Editor settings
+.vscode/
