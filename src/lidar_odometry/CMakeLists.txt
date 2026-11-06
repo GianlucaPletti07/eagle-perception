@@ -19,13 +19,15 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pcl_conversions REQUIRED)
-find_package(PCL REQUIRED COMPONENTS common filters)
+find_package(PCL REQUIRED COMPONENTS common filters registration)
 find_package(lidar_odometry_msgs REQUIRED)
 
 add_executable(lidar_odometry_node
   src/main.cpp
   src/lidar_odometry_node.cpp
+  src/local_map.cpp
   src/preprocessing.cpp
+  src/scan_to_map_odometry.cpp
 )
 target_include_directories(lidar_odometry_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
