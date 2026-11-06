@@ -22,14 +22,14 @@ lidar_odometry:
     registration:
       # Point pairs farther apart (m) are not matched; must exceed the prediction error.
       max_correspondence_distance: 1.0
-      max_iterations: 30
-      # ICP stops when an iteration changes the pose less than this.
-      transformation_epsilon: 1.0e-6
+      max_iterations: 20
+      # ICP stops when an iteration moves the pose less than about 1 cm (value is squared).
+      transformation_epsilon: 1.0e-4
 
     local_map:
       # A scan becomes a keyframe after this travel (m) or rotation (rad, about 10 degrees).
-      keyframe_distance: 1.0
+      keyframe_distance: 2.0
       keyframe_angle: 0.17
-      # Number of recent keyframes the scans are aligned against.
-      max_keyframes: 20
-      voxel_leaf_size: 0.2
+      # Recent keyframes the scans are aligned against: about 20 m of track.
+      max_keyframes: 10
+      voxel_leaf_size: 0.3
