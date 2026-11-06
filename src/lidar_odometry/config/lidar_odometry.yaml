@@ -1,0 +1,5 @@
+lidar_odometry:
+  ros__parameters:
+    input_topic: /lidar/points
+    # Scans kept in the subscription queue if processing falls behind.
+    scan_queue_depth: 10

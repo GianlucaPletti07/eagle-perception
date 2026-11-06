@@ -6,10 +6,14 @@ namespace lidar_odometry
 LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
 : Node("lidar_odometry", options)
 {
+  const auto input_topic = declare_parameter<std::string>("input_topic");
+  const auto scan_queue_depth = declare_parameter<int>("scan_queue_depth");
+
   // Scans are large: with a best-effort subscription most of them would be silently lost.
-  const auto qos = rclcpp::QoS(rclcpp::KeepLast(10)).reliable();
+  const auto qos = rclcpp::QoS(rclcpp::KeepLast(static_cast<size_t>(scan_queue_depth))).reliable();
   scan_subscription_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/lidar/points", qos,
+    input_topic,
+    qos,
     [this](const sensor_msgs::msg::PointCloud2::ConstSharedPtr & scan) {onScan(scan);});
 }
 
