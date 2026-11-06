@@ -16,6 +16,8 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -29,6 +31,7 @@ add_executable(lidar_odometry_node
   src/local_map.cpp
   src/preprocessing.cpp
   src/scan_to_map_odometry.cpp
+  src/visualization.cpp
 )
 target_include_directories(lidar_odometry_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -41,6 +44,8 @@ ament_target_dependencies(lidar_odometry_node
   rclcpp
   sensor_msgs
   nav_msgs
+  geometry_msgs
+  visualization_msgs
   tf2_ros
   tf2_eigen
   pcl_conversions

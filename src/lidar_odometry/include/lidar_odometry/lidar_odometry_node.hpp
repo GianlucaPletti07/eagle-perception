@@ -3,8 +3,10 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <Eigen/Geometry>
+#include <geometry_msgs/msg/point.hpp>
 #include <lidar_odometry_msgs/msg/processing_time.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -13,6 +15,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include "lidar_odometry/preprocessing.hpp"
 #include "lidar_odometry/scan_to_map_odometry.hpp"
@@ -37,6 +40,7 @@ private:
   LocalMapParameters loadLocalMapParameters();
 
   void publishOdometry(const std_msgs::msg::Header & scan_header);
+  void publishMarkers(const std_msgs::msg::Header & scan_header);
   void publishFilteredCloud(const Cloud & cloud, const std_msgs::msg::Header & scan_header);
 
   std::string base_frame_;
@@ -44,8 +48,11 @@ private:
   CropParameters crop_params_;
   double voxel_leaf_size_;
   bool publish_filtered_cloud_;
+  double trajectory_line_width_;
+  double vehicle_arrow_length_;
 
   std::unique_ptr<ScanToMapOdometry> odometry_;
+  std::vector<geometry_msgs::msg::Point> trajectory_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -54,6 +61,7 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr scan_subscription_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_cloud_publisher_;
   rclcpp::Publisher<lidar_odometry_msgs::msg::ProcessingTime>::SharedPtr processing_time_publisher_;
 };

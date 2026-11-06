@@ -1,3 +1,4 @@
+#include "lidar_odometry/visualization.hpp"
 #include "lidar_odometry/lidar_odometry_node.hpp"
 
 #include <chrono>
@@ -30,6 +31,8 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
   crop_params_ = loadCropParameters();
   voxel_leaf_size_ = declare_parameter<double>("preprocessing.voxel_leaf_size");
   publish_filtered_cloud_ = declare_parameter<bool>("publish_filtered_cloud");
+  trajectory_line_width_ = declare_parameter<double>("visualization.trajectory_line_width");
+  vehicle_arrow_length_ = declare_parameter<double>("visualization.vehicle_arrow_length");
 
   odometry_ = std::make_unique<ScanToMapOdometry>(
     loadRegistrationParameters(), loadLocalMapParameters());
@@ -39,6 +42,7 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   odometry_publisher_ = create_publisher<nav_msgs::msg::Odometry>("odometry", 10);
+  marker_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/markers", 10);
   // Debug output: only the most recent filtered cloud is worth showing.
   filtered_cloud_publisher_ =
     create_publisher<sensor_msgs::msg::PointCloud2>("~/filtered_points", 1);
@@ -71,7 +75,9 @@ void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedP
     RCLCPP_WARN(get_logger(), "ICP did not converge, keeping the predicted pose");
   }
 
+  trajectory_.push_back(tf2::toMsg(Eigen::Vector3d(odometry_->pose().translation())));
   publishOdometry(scan->header);
+  publishMarkers(scan->header);
   if (publish_filtered_cloud_) {
     publishFilteredCloud(*filtered_scan, scan->header);
   }
@@ -155,6 +161,19 @@ void LidarOdometryNode::publishOdometry(const std_msgs::msg::Header & scan_heade
   transform.header = odometry.header;
   transform.child_frame_id = base_frame_;
   tf_broadcaster_->sendTransform(transform);
+}
+
+void LidarOdometryNode::publishMarkers(const std_msgs::msg::Header & scan_header)
+{
+  std_msgs::msg::Header header;
+  header.stamp = scan_header.stamp;
+  header.frame_id = odom_frame_;
+
+  visualization_msgs::msg::MarkerArray markers;
+  markers.markers.push_back(makeTrajectoryMarker(header, trajectory_, trajectory_line_width_));
+  markers.markers.push_back(
+    makeVehicleMarker(header, odometry_->pose(), vehicle_arrow_length_));
+  marker_publisher_->publish(markers);
 }
 
 void LidarOdometryNode::publishFilteredCloud(

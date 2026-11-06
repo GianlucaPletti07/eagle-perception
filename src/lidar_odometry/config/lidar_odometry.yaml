@@ -33,3 +33,8 @@ lidar_odometry:
       # Recent keyframes the scans are aligned against: about 20 m of track.
       max_keyframes: 10
       voxel_leaf_size: 0.3
+
+    visualization:
+      # Marker sizes in metres.
+      trajectory_line_width: 0.15
+      vehicle_arrow_length: 2.0
