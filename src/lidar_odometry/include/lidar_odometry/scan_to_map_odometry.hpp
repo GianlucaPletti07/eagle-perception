@@ -28,16 +28,20 @@ struct RegistrationResult
 class ScanToMapOdometry
 {
 public:
-  ScanToMapOdometry(
-    const RegistrationParameters & registration, const LocalMapParameters & local_map);
+  ScanToMapOdometry( const RegistrationParameters & registration, const LocalMapParameters & local_map);
 
   /// Updates the pose with a preprocessed scan expressed in the vehicle frame.
   RegistrationResult update(const Cloud::ConstPtr & scan_in_base);
+
+  /// Applies new settings from the next scan on, keeping the current pose and map.
+  void setParameters(const RegistrationParameters & registration, const LocalMapParameters & local_map);
 
   /// Current pose of base_link in the odom frame.
   const Eigen::Isometry3d & pose() const {return odom_from_base_;}
 
 private:
+  void configureIcp(const RegistrationParameters & registration);
+
   void addKeyframe(const Cloud & scan_in_base);
 
   pcl::IterativeClosestPoint<PointT, PointT> icp_;

@@ -37,6 +37,11 @@ private:
   /// Caches the fixed sensor mounting from /tf_static. Returns false until it is available.
   bool ensureSensorExtrinsics(const std::string & sensor_frame);
 
+  /// Rereads the tunable parameters and passes them to the odometry.
+  void applyTunableParameters();
+  bool tunable_parameters_changed_{false};
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
+
   void publishOdometry(const std_msgs::msg::Header & scan_header);
   void publishMarkers(const std_msgs::msg::Header & scan_header);
   void publishTrackMap(const std_msgs::msg::Header & scan_header);

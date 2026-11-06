@@ -55,11 +55,24 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
   scan_subscription_ = create_subscription<sensor_msgs::msg::PointCloud2>(
     startup_params_.input_topic, qos,
     [this](const sensor_msgs::msg::PointCloud2::ConstSharedPtr & scan) {onScan(scan);});
+
+  // Humble calls this before storing the new values, so changes are only flagged here and
+  // read at the next scan. The node is single-threaded: this never runs during onScan.
+  parameter_callback_handle_ = add_on_set_parameters_callback(
+    [this](const std::vector<rclcpp::Parameter> &) {
+      tunable_parameters_changed_ = true;
+      rcl_interfaces::msg::SetParametersResult result;
+      result.successful = true;
+      return result;
+    });
 }
 
 void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & scan)
 {
   const auto start = Clock::now();
+  if (tunable_parameters_changed_) {
+    applyTunableParameters();
+  }
   if (!ensureSensorExtrinsics(scan->header.frame_id)) {
     return;
   }
@@ -121,6 +134,14 @@ bool LidarOdometryNode::ensureSensorExtrinsics(const std::string & sensor_frame)
     get_logger(), "Sensor mounted at (%.3f, %.3f, %.3f) m in '%s'",
     offset.x(), offset.y(), offset.z(), base_frame.c_str());
   return true;
+}
+
+void LidarOdometryNode::applyTunableParameters()
+{
+  params_ = readTunableParameters(*this);
+  odometry_->setParameters(params_.registration, params_.local_map);
+  tunable_parameters_changed_ = false;
+  RCLCPP_INFO(get_logger(), "Tunable parameters updated");
 }
 
 void LidarOdometryNode::publishOdometry(const std_msgs::msg::Header & scan_header)

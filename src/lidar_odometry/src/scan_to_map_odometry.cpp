@@ -33,6 +33,18 @@ ScanToMapOdometry::ScanToMapOdometry(
   // The ground is flat, so only x, y and yaw are estimated: z, roll and pitch cannot drift.
   icp_.setTransformationEstimation(
     std::make_shared<pcl::registration::TransformationEstimation2D<PointT, PointT>>());
+  configureIcp(registration);
+}
+
+void ScanToMapOdometry::setParameters(
+  const RegistrationParameters & registration, const LocalMapParameters & local_map)
+{
+  configureIcp(registration);
+  local_map_.setParameters(local_map);
+}
+
+void ScanToMapOdometry::configureIcp(const RegistrationParameters & registration)
+{
   icp_.setMaxCorrespondenceDistance(registration.max_correspondence_distance);
   icp_.setMaximumIterations(registration.max_iterations);
   icp_.setTransformationEpsilon(registration.transformation_epsilon);

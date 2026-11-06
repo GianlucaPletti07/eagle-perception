@@ -19,6 +19,11 @@ bool LocalMap::empty() const
   return keyframes_.empty();
 }
 
+void LocalMap::setParameters(const LocalMapParameters & params)
+{
+  params_ = params;
+}
+
 bool LocalMap::isNewKeyframe(const Eigen::Isometry3d & odom_from_base) const
 {
   if (empty()) {
@@ -37,7 +42,7 @@ void LocalMap::addKeyframe(const Cloud & scan_in_base, const Eigen::Isometry3d &
   pcl::transformPointCloud(scan_in_base, *keyframe, odom_from_base_matrix);
 
   keyframes_.push_back(keyframe);
-  if (keyframes_.size() > params_.max_keyframes) {
+  while (keyframes_.size() > params_.max_keyframes) {
     keyframes_.pop_front();
   }
   last_keyframe_pose_ = odom_from_base;
