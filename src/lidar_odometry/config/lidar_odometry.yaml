@@ -38,3 +38,8 @@ lidar_odometry:
       # Marker sizes in metres.
       trajectory_line_width: 0.15
       vehicle_arrow_length: 2.0
+
+    track_map:
+      # Accumulate every keyframe into a map of the whole track, published on ~/track_map.
+      enabled: true
+      voxel_leaf_size: 0.2

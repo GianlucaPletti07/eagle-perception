@@ -43,7 +43,7 @@ RegistrationResult ScanToMapOdometry::update(const Cloud::ConstPtr & scan_in_bas
   if (local_map_.empty()) {
     // The first scan defines the odom frame: the car starts at its origin, facing +x.
     addKeyframe(*scan_in_base);
-    return {true, 0.0};
+    return {true, 0.0, true};
   }
 
   // Constant velocity: the car is assumed to repeat the motion of the previous interval.
@@ -52,7 +52,7 @@ RegistrationResult ScanToMapOdometry::update(const Cloud::ConstPtr & scan_in_bas
   icp_.setInputSource(scan_in_base);
   Cloud aligned_scan;
   icp_.align(aligned_scan, prediction.matrix().cast<float>());
-  const RegistrationResult result{icp_.hasConverged(), icp_.getFitnessScore()};
+  RegistrationResult result{icp_.hasConverged(), icp_.getFitnessScore(), false};
 
   if (!result.converged) {
     // Keep the prediction, and leave the map untouched so a bad scan cannot corrupt it.
@@ -66,6 +66,7 @@ RegistrationResult ScanToMapOdometry::update(const Cloud::ConstPtr & scan_in_bas
 
   if (local_map_.isNewKeyframe(odom_from_base_)) {
     addKeyframe(*scan_in_base);
+    result.keyframe_added = true;
   }
   return result;
 }

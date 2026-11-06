@@ -31,6 +31,7 @@ add_executable(lidar_odometry_node
   src/local_map.cpp
   src/preprocessing.cpp
   src/scan_to_map_odometry.cpp
+  src/track_map.cpp
   src/visualization.cpp
 )
 target_include_directories(lidar_odometry_node PRIVATE

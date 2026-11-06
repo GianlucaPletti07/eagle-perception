@@ -19,6 +19,7 @@
 
 #include "lidar_odometry/preprocessing.hpp"
 #include "lidar_odometry/scan_to_map_odometry.hpp"
+#include "lidar_odometry/track_map.hpp"
 
 namespace lidar_odometry
 {
@@ -41,6 +42,7 @@ private:
 
   void publishOdometry(const std_msgs::msg::Header & scan_header);
   void publishMarkers(const std_msgs::msg::Header & scan_header);
+  void publishTrackMap(const std_msgs::msg::Header & scan_header);
   void publishFilteredCloud(const Cloud & cloud, const std_msgs::msg::Header & scan_header);
 
   std::string base_frame_;
@@ -53,6 +55,7 @@ private:
 
   std::unique_ptr<ScanToMapOdometry> odometry_;
   std::vector<geometry_msgs::msg::Point> trajectory_;
+  std::unique_ptr<TrackMap> track_map_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -64,6 +67,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_cloud_publisher_;
   rclcpp::Publisher<lidar_odometry_msgs::msg::ProcessingTime>::SharedPtr processing_time_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr track_map_publisher_;
 };
 
 }  // namespace lidar_odometry

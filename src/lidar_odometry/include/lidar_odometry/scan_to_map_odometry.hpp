@@ -19,7 +19,8 @@ struct RegistrationParameters
 struct RegistrationResult
 {
   bool converged;
-  double fitness;  ///< Mean squared distance (m^2) between matched points; lower is better.
+  double fitness;       ///< Mean squared distance (m^2) between matched points; lower is better.
+  bool keyframe_added;  ///< The scan became a keyframe of the local map.
 };
 
 /// Tracks the vehicle pose by aligning each scan against a local map of recent keyframes.

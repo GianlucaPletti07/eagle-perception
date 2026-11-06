@@ -33,6 +33,12 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
   publish_filtered_cloud_ = declare_parameter<bool>("publish_filtered_cloud");
   trajectory_line_width_ = declare_parameter<double>("visualization.trajectory_line_width");
   vehicle_arrow_length_ = declare_parameter<double>("visualization.vehicle_arrow_length");
+  
+  const bool build_track_map = declare_parameter<bool>("track_map.enabled");
+  const double track_map_leaf_size = declare_parameter<double>("track_map.voxel_leaf_size");
+  if (build_track_map) {
+    track_map_ = std::make_unique<TrackMap>(track_map_leaf_size);
+  }
 
   odometry_ = std::make_unique<ScanToMapOdometry>(
     loadRegistrationParameters(), loadLocalMapParameters());
@@ -43,6 +49,8 @@ LidarOdometryNode::LidarOdometryNode(const rclcpp::NodeOptions & options)
 
   odometry_publisher_ = create_publisher<nav_msgs::msg::Odometry>("odometry", 10);
   marker_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/markers", 10);
+  // Transient local: RViz still receives the latest map if it subscribes after it was published.
+  track_map_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("~/track_map", rclcpp::QoS(1).transient_local());
   // Debug output: only the most recent filtered cloud is worth showing.
   filtered_cloud_publisher_ =
     create_publisher<sensor_msgs::msg::PointCloud2>("~/filtered_points", 1);
@@ -78,6 +86,10 @@ void LidarOdometryNode::onScan(const sensor_msgs::msg::PointCloud2::ConstSharedP
   trajectory_.push_back(tf2::toMsg(Eigen::Vector3d(odometry_->pose().translation())));
   publishOdometry(scan->header);
   publishMarkers(scan->header);
+  if (track_map_ && registration.keyframe_added) {
+    track_map_->add(*filtered_scan, odometry_->pose());
+    publishTrackMap(scan->header);
+  }
   if (publish_filtered_cloud_) {
     publishFilteredCloud(*filtered_scan, scan->header);
   }
@@ -174,6 +186,15 @@ void LidarOdometryNode::publishMarkers(const std_msgs::msg::Header & scan_header
   markers.markers.push_back(
     makeVehicleMarker(header, odometry_->pose(), vehicle_arrow_length_));
   marker_publisher_->publish(markers);
+}
+
+void LidarOdometryNode::publishTrackMap(const std_msgs::msg::Header & scan_header)
+{
+  sensor_msgs::msg::PointCloud2 message;
+  pcl::toROSMsg(*track_map_->cloud(), message);
+  message.header.stamp = scan_header.stamp;
+  message.header.frame_id = odom_frame_;
+  track_map_publisher_->publish(message);
 }
 
 void LidarOdometryNode::publishFilteredCloud(
