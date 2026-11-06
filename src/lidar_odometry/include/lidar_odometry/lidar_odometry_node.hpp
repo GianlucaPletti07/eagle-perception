@@ -17,6 +17,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include "lidar_odometry/parameters.hpp"
 #include "lidar_odometry/preprocessing.hpp"
 #include "lidar_odometry/scan_to_map_odometry.hpp"
 #include "lidar_odometry/track_map.hpp"
@@ -36,22 +37,13 @@ private:
   /// Caches the fixed sensor mounting from /tf_static. Returns false until it is available.
   bool ensureSensorExtrinsics(const std::string & sensor_frame);
 
-  CropParameters loadCropParameters();
-  RegistrationParameters loadRegistrationParameters();
-  LocalMapParameters loadLocalMapParameters();
-
   void publishOdometry(const std_msgs::msg::Header & scan_header);
   void publishMarkers(const std_msgs::msg::Header & scan_header);
   void publishTrackMap(const std_msgs::msg::Header & scan_header);
   void publishFilteredCloud(const Cloud & cloud, const std_msgs::msg::Header & scan_header);
 
-  std::string base_frame_;
-  std::string odom_frame_;
-  CropParameters crop_params_;
-  double voxel_leaf_size_;
-  bool publish_filtered_cloud_;
-  double trajectory_line_width_;
-  double vehicle_arrow_length_;
+  StartupParameters startup_params_;
+  TunableParameters params_;
 
   std::unique_ptr<ScanToMapOdometry> odometry_;
   std::vector<geometry_msgs::msg::Point> trajectory_;
@@ -65,9 +57,9 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr scan_subscription_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_publisher_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr track_map_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_cloud_publisher_;
   rclcpp::Publisher<lidar_odometry_msgs::msg::ProcessingTime>::SharedPtr processing_time_publisher_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr track_map_publisher_;
 };
 
 }  // namespace lidar_odometry
