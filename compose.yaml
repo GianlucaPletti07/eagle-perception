@@ -1,0 +1,18 @@
+services:
+  ros:
+    build:
+      context: docker
+    image: eagle-perception:humble
+    container_name: eagle-perception
+    # Keep the container running so we can open several shells into it
+    stdin_open: true
+    tty: true
+    environment:
+      # WSLg and Linux hosts both expose an X server here
+      DISPLAY: ${DISPLAY:-:0}
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      # The repo is the colcon workspace, mounted where the image expects it
+      - .:/home/eagle/ws
+      # X11 socket, so RViz windows open on the host
+      - /tmp/.X11-unix:/tmp/.X11-unix
