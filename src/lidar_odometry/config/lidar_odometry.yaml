@@ -3,3 +3,4 @@ lidar_odometry:
     input_topic: /lidar/points
     # Scans kept in the subscription queue if processing falls behind.
     scan_queue_depth: 10
+    base_frame: base_link

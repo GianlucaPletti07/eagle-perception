@@ -10,6 +10,9 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_executable(lidar_odometry_node
   src/main.cpp
@@ -21,7 +24,10 @@ target_include_directories(lidar_odometry_node PRIVATE
 ament_target_dependencies(lidar_odometry_node
   rclcpp
   sensor_msgs
+  tf2_ros
+  tf2_eigen
 )
+target_link_libraries(lidar_odometry_node Eigen3::Eigen)
 
 install(TARGETS lidar_odometry_node
   DESTINATION lib/${PROJECT_NAME}
