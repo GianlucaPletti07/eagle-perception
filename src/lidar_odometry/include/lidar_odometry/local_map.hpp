@@ -25,10 +25,10 @@ class LocalMap
 public:
   explicit LocalMap(const LocalMapParameters & params);
 
-  bool empty() const;
-
   /// New settings apply from the next keyframe on.
   void setParameters(const LocalMapParameters & params);
+
+  bool empty() const;
 
   /// True when the vehicle moved or turned enough since the last keyframe.
   bool isNewKeyframe(const Eigen::Isometry3d & odom_from_base) const;

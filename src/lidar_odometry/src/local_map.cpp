@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include <pcl/common/transforms.h>
-
 namespace lidar_odometry
 {
 
@@ -14,14 +12,14 @@ LocalMap::LocalMap(const LocalMapParameters & params)
 {
 }
 
-bool LocalMap::empty() const
-{
-  return keyframes_.empty();
-}
-
 void LocalMap::setParameters(const LocalMapParameters & params)
 {
   params_ = params;
+}
+
+bool LocalMap::empty() const
+{
+  return keyframes_.empty();
 }
 
 bool LocalMap::isNewKeyframe(const Eigen::Isometry3d & odom_from_base) const
@@ -37,11 +35,7 @@ bool LocalMap::isNewKeyframe(const Eigen::Isometry3d & odom_from_base) const
 
 void LocalMap::addKeyframe(const Cloud & scan_in_base, const Eigen::Isometry3d & odom_from_base)
 {
-  const Eigen::Matrix4f odom_from_base_matrix = odom_from_base.matrix().cast<float>();
-  auto keyframe = std::make_shared<Cloud>();
-  pcl::transformPointCloud(scan_in_base, *keyframe, odom_from_base_matrix);
-
-  keyframes_.push_back(keyframe);
+  keyframes_.push_back(std::make_shared<Cloud>(transformCloud(scan_in_base, odom_from_base)));
   while (keyframes_.size() > params_.max_keyframes) {
     keyframes_.pop_front();
   }

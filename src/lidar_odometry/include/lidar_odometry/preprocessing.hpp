@@ -22,12 +22,10 @@ struct CropParameters
 Cloud::Ptr cropToVehicleFrame(
   const Cloud & scan, const Eigen::Isometry3d & base_from_sensor, const CropParameters & params);
 
-/// Moves the scan into the vehicle frame and keeps only the points that help alignment:
-/// no ground, no returns from the car itself, nothing too far away to be reliable.
-Cloud::Ptr cropToVehicleFrame(
-  const Cloud & scan, const Eigen::Isometry3d & base_from_sensor, const CropParameters & params);
-
 /// Keeps one point per voxel, so registration cost no longer depends on the point density.
 Cloud::Ptr downsample(const Cloud::ConstPtr & cloud, double leaf_size);
+
+/// Expresses a cloud in another frame, e.g. a scan seen from a pose moved into odom.
+Cloud transformCloud(const Cloud & cloud, const Eigen::Isometry3d & target_from_source);
 
 }  // namespace lidar_odometry

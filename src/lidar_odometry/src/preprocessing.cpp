@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <pcl/common/point_tests.h>
+#include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 
 namespace lidar_odometry
@@ -43,6 +44,14 @@ Cloud::Ptr downsample(const Cloud::ConstPtr & cloud, double leaf_size)
   auto downsampled = std::make_shared<Cloud>();
   voxel_grid.filter(*downsampled);
   return downsampled;
+}
+
+Cloud transformCloud(const Cloud & cloud, const Eigen::Isometry3d & target_from_source)
+{
+  const Eigen::Matrix4f matrix = target_from_source.matrix().cast<float>();
+  Cloud transformed;
+  pcl::transformPointCloud(cloud, transformed, matrix);
+  return transformed;
 }
 
 }  // namespace lidar_odometry
