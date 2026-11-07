@@ -7,7 +7,6 @@
 
 namespace lidar_odometry
 {
-
 namespace
 {
 
@@ -43,19 +42,12 @@ void ScanToMapOdometry::setParameters(
   local_map_.setParameters(local_map);
 }
 
-void ScanToMapOdometry::configureIcp(const RegistrationParameters & registration)
-{
-  icp_.setMaxCorrespondenceDistance(registration.max_correspondence_distance);
-  icp_.setMaximumIterations(registration.max_iterations);
-  icp_.setTransformationEpsilon(registration.transformation_epsilon);
-}
-
 RegistrationResult ScanToMapOdometry::update(const Cloud::ConstPtr & scan_in_base)
 {
   if (local_map_.empty()) {
     // The first scan defines the odom frame: the car starts at its origin, facing +x.
     addKeyframe(*scan_in_base);
-    return {true, 0.0, true};
+    return {true, true};
   }
 
   // Constant velocity: the car is assumed to repeat the motion of the previous interval.
@@ -64,23 +56,29 @@ RegistrationResult ScanToMapOdometry::update(const Cloud::ConstPtr & scan_in_bas
   icp_.setInputSource(scan_in_base);
   Cloud aligned_scan;
   icp_.align(aligned_scan, prediction.matrix().cast<float>());
-  RegistrationResult result{icp_.hasConverged(), icp_.getFitnessScore(), false};
 
-  if (!result.converged) {
+  if (!icp_.hasConverged()) {
     // Keep the prediction, and leave the map untouched so a bad scan cannot corrupt it.
     odom_from_base_ = prediction;
-    return result;
+    return {false, false};
   }
 
   const Eigen::Isometry3d previous_pose = odom_from_base_;
   odom_from_base_ = planarPose(icp_.getFinalTransformation());
   last_motion_ = previous_pose.inverse() * odom_from_base_;
 
-  if (local_map_.isNewKeyframe(odom_from_base_)) {
-    addKeyframe(*scan_in_base);
-    result.keyframe_added = true;
+  if (!local_map_.isNewKeyframe(odom_from_base_)) {
+    return {true, false};
   }
-  return result;
+  addKeyframe(*scan_in_base);
+  return {true, true};
+}
+
+void ScanToMapOdometry::configureIcp(const RegistrationParameters & registration)
+{
+  icp_.setMaxCorrespondenceDistance(registration.max_correspondence_distance);
+  icp_.setMaximumIterations(registration.max_iterations);
+  icp_.setTransformationEpsilon(registration.transformation_epsilon);
 }
 
 void ScanToMapOdometry::addKeyframe(const Cloud & scan_in_base)
