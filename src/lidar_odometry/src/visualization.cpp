@@ -1,6 +1,8 @@
 #include "lidar_odometry/visualization.hpp"
 
-#include <std_msgs/msg/color_rgba.hpp>
+#include <cstdint>
+#include <string>
+
 #include <tf2_eigen/tf2_eigen.hpp>
 
 namespace lidar_odometry
@@ -8,54 +10,42 @@ namespace lidar_odometry
 namespace
 {
 
-/// Arrow shaft and head width relative to its length.
-constexpr double kArrowWidthRatio = 0.25;
+using visualization_msgs::msg::Marker;
 
-std_msgs::msg::ColorRGBA makeColor(float red, float green, float blue)
+/// Republishing the same namespace and id makes RViz update a marker instead of adding one.
+Marker makeMarker(const std_msgs::msg::Header & header, const std::string & name, int32_t type)
 {
-  std_msgs::msg::ColorRGBA color;
-  color.r = red;
-  color.g = green;
-  color.b = blue;
-  color.a = 1.0F;
-  return color;
+  Marker marker;
+  marker.header = header;
+  marker.ns = name;
+  marker.id = 0;
+  marker.type = type;
+  marker.action = Marker::ADD;
+  marker.pose.orientation.w = 1.0;
+  return marker;
 }
 
 }  // namespace
 
-visualization_msgs::msg::Marker makeTrajectoryMarker(
-  const std_msgs::msg::Header & header, const std::vector<geometry_msgs::msg::Point> & positions,
-  double line_width)
+visualization_msgs::msg::MarkerArray makeMarkers(
+  const std_msgs::msg::Header & header, const std::vector<geometry_msgs::msg::Point> & trajectory,
+  const Eigen::Isometry3d & odom_from_base, const MarkerStyle & style)
 {
-  visualization_msgs::msg::Marker marker;
-  marker.header = header;
-  marker.ns = "trajectory";
-  marker.id = 0;
-  marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.orientation.w = 1.0;
-  marker.scale.x = line_width;
-  marker.color = makeColor(0.1F, 0.6F, 1.0F);
-  marker.points = positions;
-  return marker;
-}
+  Marker trajectory_marker = makeMarker(header, "trajectory", Marker::LINE_STRIP);
+  trajectory_marker.scale.x = style.trajectory_width;
+  trajectory_marker.color = style.trajectory_color;
+  trajectory_marker.points = trajectory;
 
-visualization_msgs::msg::Marker makeVehicleMarker(
-  const std_msgs::msg::Header & header, const Eigen::Isometry3d & odom_from_base,
-  double arrow_length)
-{
-  visualization_msgs::msg::Marker marker;
-  marker.header = header;
-  marker.ns = "vehicle";
-  marker.id = 0;
-  marker.type = visualization_msgs::msg::Marker::ARROW;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose = tf2::toMsg(odom_from_base);
-  marker.scale.x = arrow_length;
-  marker.scale.y = arrow_length * kArrowWidthRatio;
-  marker.scale.z = arrow_length * kArrowWidthRatio;
-  marker.color = makeColor(1.0F, 0.5F, 0.0F);
-  return marker;
+  Marker vehicle_marker = makeMarker(header, "vehicle", Marker::ARROW);
+  vehicle_marker.pose = tf2::toMsg(odom_from_base);
+  vehicle_marker.scale.x = style.vehicle_length;
+  vehicle_marker.scale.y = style.vehicle_width;
+  vehicle_marker.scale.z = style.vehicle_width;
+  vehicle_marker.color = style.vehicle_color;
+
+  visualization_msgs::msg::MarkerArray markers;
+  markers.markers = {trajectory_marker, vehicle_marker};
+  return markers;
 }
 
 }  // namespace lidar_odometry

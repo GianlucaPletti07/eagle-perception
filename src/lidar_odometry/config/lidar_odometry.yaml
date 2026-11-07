@@ -1,26 +1,46 @@
 lidar_odometry:
   ros__parameters:
+    # ---------------------------------------------------------------------------------------
+    # Fixed at startup: read-only, changing them needs a restart.
+    # ---------------------------------------------------------------------------------------
     input_topic: /lidar/points
-    # Scans kept in the subscription queue if processing falls behind.
-    scan_queue_depth: 10
     base_frame: base_link
+    odom_frame: odom
 
-    # Publish the preprocessed scan for inspection in RViz. Disable it when measuring timing.
+    queue_depth:
+      # Scans kept if processing falls behind, so an occasional slow scan delays the next
+      # ones instead of dropping them.
+      scans: 10
+      # Messages kept by each output topic.
+      outputs: 10
+      # Only the latest map matters to a subscriber that joins late, e.g. RViz.
+      track_map: 1
+
+    track_map:
+      # Accumulate every keyframe into a map of the whole track, published on ~/track_map.
+      enabled: true
+      voxel_leaf_size: 0.2
+
+    # ---------------------------------------------------------------------------------------
+    # Tunable while the node runs, with ros2 param set or rqt_reconfigure.
+    # ---------------------------------------------------------------------------------------
+
+    # Publish the preprocessed scan on ~/filtered_points. Off by default: it costs time on
+    # every scan and is only useful for inspection.
     publish_filtered_cloud: false
 
     # All distances in metres, in the base_link frame (rear axle, on the ground).
     preprocessing:
-      # Returns beyond this horizontal distance are sparse and noisy.
+      # Returns beyond this horizontal distance are sparse and noisy. Far buildings still
+      # constrain the heading: at 25 m the lap closed with 1.25 deg of error instead of 0.15.
       max_range: 40.0
       # The ground is flat at z = 0; this margin absorbs sensor noise.
       ground_max_height: 0.10
-      # Edge of the cubes used to thin the cloud.
+      # Edge of the cubes used to thin each scan; ICP cost grows with the points left.
       voxel_leaf_size: 0.3
 
-    odom_frame: odom
-
     registration:
-      # Point pairs farther apart (m) are not matched; must exceed the prediction error.
+      # Point pairs farther apart are not matched; must exceed the prediction error.
       max_correspondence_distance: 1.0
       max_iterations: 20
       # ICP stops when an iteration moves the pose less than about 1 cm (value is squared).
@@ -34,12 +54,18 @@ lidar_odometry:
       max_keyframes: 10
       voxel_leaf_size: 0.3
 
+    # Marker sizes in metres, colours as red, green, blue and opacity between 0 and 1.
     visualization:
-      # Marker sizes in metres.
-      trajectory_line_width: 0.15
-      vehicle_arrow_length: 2.0
-
-    track_map:
-      # Accumulate every keyframe into a map of the whole track, published on ~/track_map.
-      enabled: true
-      voxel_leaf_size: 0.2
+      trajectory_width: 0.15
+      trajectory_color:
+        r: 0.1
+        g: 0.6
+        b: 1.0
+        a: 1.0
+      vehicle_length: 2.0
+      vehicle_width: 0.5
+      vehicle_color:
+        r: 1.0
+        g: 0.5
+        b: 0.0
+        a: 1.0

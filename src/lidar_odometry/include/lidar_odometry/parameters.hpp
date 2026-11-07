@@ -7,6 +7,7 @@
 #include "lidar_odometry/local_map.hpp"
 #include "lidar_odometry/preprocessing.hpp"
 #include "lidar_odometry/scan_to_map_odometry.hpp"
+#include "lidar_odometry/visualization.hpp"
 
 namespace lidar_odometry
 {
@@ -15,9 +16,11 @@ namespace lidar_odometry
 struct StartupParameters
 {
   std::string input_topic;
-  int scan_queue_depth;
   std::string base_frame;
   std::string odom_frame;
+  int scan_queue_depth;
+  int output_queue_depth;
+  int track_map_queue_depth;
   bool track_map_enabled;
   double track_map_voxel_leaf_size;
 };
@@ -30,17 +33,14 @@ struct TunableParameters
   RegistrationParameters registration;
   LocalMapParameters local_map;
   bool publish_filtered_cloud;
-  double trajectory_line_width;
-  double vehicle_arrow_length;
+  MarkerStyle markers;
 };
 
 /// Declares the startup parameters as read-only and returns their values.
-StartupParameters declareStartupParameters(rclcpp::Node & node);
+StartupParameters loadStartupParameters(rclcpp::Node & node);
 
-/// Declares the tunable parameters together with their valid ranges.
-void declareTunableParameters(rclcpp::Node & node);
-
-/// Reads the current values of the tunable parameters.
-TunableParameters readTunableParameters(const rclcpp::Node & node);
+/// Declares the tunable parameters with their valid ranges on the first call, and returns
+/// their current values on every call.
+TunableParameters loadTunableParameters(rclcpp::Node & node);
 
 }  // namespace lidar_odometry

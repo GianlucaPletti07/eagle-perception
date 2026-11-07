@@ -32,6 +32,8 @@ public:
   explicit LidarOdometryNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 private:
+  void createPublishers();
+
   void onScan(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & scan);
 
   /// Caches the fixed sensor mounting from /tf_static. Returns false until it is available.
@@ -39,20 +41,23 @@ private:
 
   /// Rereads the tunable parameters and passes them to the odometry.
   void applyTunableParameters();
-  bool tunable_parameters_changed_{false};
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
 
-  void publishOdometry(const std_msgs::msg::Header & scan_header);
-  void publishMarkers(const std_msgs::msg::Header & scan_header);
-  void publishTrackMap(const std_msgs::msg::Header & scan_header);
-  void publishFilteredCloud(const Cloud & cloud, const std_msgs::msg::Header & scan_header);
+  /// Publishes pose, markers and maps derived from one scan, stamped with that scan's time.
+  void publishResults(
+    const std_msgs::msg::Header & scan_header, const Cloud & filtered_scan, bool keyframe_added);
+
+  /// Publishes the pose on /odometry and as the odom -> base_link transform.
+  void publishPose(
+    const std_msgs::msg::Header & odom_header, const Eigen::Isometry3d & odom_from_base);
 
   StartupParameters startup_params_;
   TunableParameters params_;
+  bool tunable_parameters_changed_{false};
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
 
   std::unique_ptr<ScanToMapOdometry> odometry_;
-  std::vector<geometry_msgs::msg::Point> trajectory_;
   std::unique_ptr<TrackMap> track_map_;
+  std::vector<geometry_msgs::msg::Point> trajectory_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
 
 namespace lidar_odometry
 {
@@ -11,21 +12,6 @@ namespace
 {
 
 using rcl_interfaces::msg::ParameterDescriptor;
-
-// Names of the tunable parameters, shared by declaration and reading.
-constexpr char kMaxRange[] = "preprocessing.max_range";
-constexpr char kGroundMaxHeight[] = "preprocessing.ground_max_height";
-constexpr char kScanVoxelLeafSize[] = "preprocessing.voxel_leaf_size";
-constexpr char kMaxCorrespondenceDistance[] = "registration.max_correspondence_distance";
-constexpr char kMaxIterations[] = "registration.max_iterations";
-constexpr char kTransformationEpsilon[] = "registration.transformation_epsilon";
-constexpr char kKeyframeDistance[] = "local_map.keyframe_distance";
-constexpr char kKeyframeAngle[] = "local_map.keyframe_angle";
-constexpr char kMaxKeyframes[] = "local_map.max_keyframes";
-constexpr char kMapVoxelLeafSize[] = "local_map.voxel_leaf_size";
-constexpr char kPublishFilteredCloud[] = "publish_filtered_cloud";
-constexpr char kTrajectoryLineWidth[] = "visualization.trajectory_line_width";
-constexpr char kVehicleArrowLength[] = "visualization.vehicle_arrow_length";
 
 ParameterDescriptor described(const std::string & description)
 {
@@ -60,19 +46,67 @@ ParameterDescriptor integerRange(const std::string & description, int64_t from, 
   return descriptor;
 }
 
+/// Declares the parameter on the first call and reads its current value afterwards, so the
+/// same code sets the parameters up at startup and picks up changes made at runtime.
+template<typename T>
+T declareOrGet(rclcpp::Node & node, const std::string & name, const ParameterDescriptor & descriptor)
+{
+  if (!node.has_parameter(name)) {
+    return node.declare_parameter<T>(name, descriptor);
+  }
+  return node.get_parameter(name).get_value<T>();
+}
+
+double loadDouble(
+  rclcpp::Node & node, const std::string & name, const std::string & description,
+  double from, double to)
+{
+  return declareOrGet<double>(node, name, floatingRange(description, from, to));
+}
+
+int64_t loadInteger(
+  rclcpp::Node & node, const std::string & name, const std::string & description,
+  int64_t from, int64_t to)
+{
+  return declareOrGet<int64_t>(node, name, integerRange(description, from, to));
+}
+
+float loadColorChannel(
+  rclcpp::Node & node, const std::string & name, const std::string & description)
+{
+  return static_cast<float>(loadDouble(node, name, description, 0.0, 1.0));
+}
+
+/// A colour is four parameters, one per channel, each between 0 and 1.
+std_msgs::msg::ColorRGBA loadColor(
+  rclcpp::Node & node, const std::string & name, const std::string & description)
+{
+  std_msgs::msg::ColorRGBA color;
+  color.r = loadColorChannel(node, name + ".r", description + ", red channel");
+  color.g = loadColorChannel(node, name + ".g", description + ", green channel");
+  color.b = loadColorChannel(node, name + ".b", description + ", blue channel");
+  color.a = loadColorChannel(node, name + ".a", description + ", opacity");
+  return color;
+}
+
 }  // namespace
 
-StartupParameters declareStartupParameters(rclcpp::Node & node)
+StartupParameters loadStartupParameters(rclcpp::Node & node)
 {
   StartupParameters params;
   params.input_topic = node.declare_parameter<std::string>(
     "input_topic", readOnly("PointCloud2 topic with the LiDAR scans"));
-  params.scan_queue_depth = node.declare_parameter<int>(
-    "scan_queue_depth", readOnly("Scans kept in the subscription queue if processing falls behind"));
   params.base_frame = node.declare_parameter<std::string>(
     "base_frame", readOnly("Vehicle frame, on the ground at the rear axle"));
   params.odom_frame = node.declare_parameter<std::string>(
     "odom_frame", readOnly("Fixed frame where the vehicle starts"));
+  params.scan_queue_depth = node.declare_parameter<int>(
+    "queue_depth.scans",
+    readOnly("Scans kept in the subscription queue if processing falls behind"));
+  params.output_queue_depth = node.declare_parameter<int>(
+    "queue_depth.outputs", readOnly("Messages kept in the queue of each output topic"));
+  params.track_map_queue_depth = node.declare_parameter<int>(
+    "queue_depth.track_map", readOnly("Track maps kept for subscribers that join late"));
   params.track_map_enabled = node.declare_parameter<bool>(
     "track_map.enabled", readOnly("Accumulate keyframes into a map of the whole track"));
   params.track_map_voxel_leaf_size = node.declare_parameter<double>(
@@ -80,58 +114,53 @@ StartupParameters declareStartupParameters(rclcpp::Node & node)
   return params;
 }
 
-void declareTunableParameters(rclcpp::Node & node)
-{
-  node.declare_parameter<double>(
-    kMaxRange, floatingRange("Horizontal distance (m) beyond which points are dropped", 1.0, 200.0));
-  node.declare_parameter<double>(
-    kGroundMaxHeight, floatingRange("Points at or below this height (m) are ground", -0.5, 1.0));
-  node.declare_parameter<double>(
-    kScanVoxelLeafSize, floatingRange("Voxel edge (m) used to thin each scan", 0.01, 2.0));
-  node.declare_parameter<double>(
-    kMaxCorrespondenceDistance,
-    floatingRange("Point pairs farther apart (m) are not matched by ICP", 0.05, 10.0));
-  node.declare_parameter<int>(
-    kMaxIterations, integerRange("Upper bound on ICP iterations per scan", 1, 200));
-  node.declare_parameter<double>(
-    kTransformationEpsilon,
-    floatingRange("ICP stops when an iteration changes the pose less than this", 1e-12, 1.0));
-  node.declare_parameter<double>(
-    kKeyframeDistance, floatingRange("Travel (m) after which a scan becomes a keyframe", 0.1, 50.0));
-  node.declare_parameter<double>(
-    kKeyframeAngle, floatingRange("Rotation (rad) after which a scan becomes a keyframe", 0.01, 3.14));
-  node.declare_parameter<int>(
-    kMaxKeyframes, integerRange("Recent keyframes the scans are aligned against", 1, 100));
-  node.declare_parameter<double>(
-    kMapVoxelLeafSize, floatingRange("Voxel edge (m) used to thin the local map", 0.01, 2.0));
-  node.declare_parameter<bool>(
-    kPublishFilteredCloud, described("Publish the preprocessed scan on ~/filtered_points"));
-  node.declare_parameter<double>(
-    kTrajectoryLineWidth, floatingRange("Width (m) of the trajectory marker", 0.01, 2.0));
-  node.declare_parameter<double>(
-    kVehicleArrowLength, floatingRange("Length (m) of the vehicle arrow marker", 0.1, 10.0));
-}
-
-TunableParameters readTunableParameters(const rclcpp::Node & node)
+TunableParameters loadTunableParameters(rclcpp::Node & node)
 {
   TunableParameters params;
-  params.crop.max_range = node.get_parameter(kMaxRange).as_double();
-  params.crop.ground_max_height = node.get_parameter(kGroundMaxHeight).as_double();
-  params.voxel_leaf_size = node.get_parameter(kScanVoxelLeafSize).as_double();
-  params.registration.max_correspondence_distance =
-    node.get_parameter(kMaxCorrespondenceDistance).as_double();
-  params.registration.max_iterations =
-    static_cast<int>(node.get_parameter(kMaxIterations).as_int());
-  params.registration.transformation_epsilon =
-    node.get_parameter(kTransformationEpsilon).as_double();
-  params.local_map.keyframe_distance = node.get_parameter(kKeyframeDistance).as_double();
-  params.local_map.keyframe_angle = node.get_parameter(kKeyframeAngle).as_double();
-  params.local_map.max_keyframes =
-    static_cast<std::size_t>(node.get_parameter(kMaxKeyframes).as_int());
-  params.local_map.voxel_leaf_size = node.get_parameter(kMapVoxelLeafSize).as_double();
-  params.publish_filtered_cloud = node.get_parameter(kPublishFilteredCloud).as_bool();
-  params.trajectory_line_width = node.get_parameter(kTrajectoryLineWidth).as_double();
-  params.vehicle_arrow_length = node.get_parameter(kVehicleArrowLength).as_double();
+
+  params.crop.max_range = loadDouble(
+    node, "preprocessing.max_range", "Horizontal distance (m) beyond which points are dropped",
+    1.0, 200.0);
+  params.crop.ground_max_height = loadDouble(
+    node, "preprocessing.ground_max_height", "Points at or below this height (m) are ground",
+    -0.5, 1.0);
+  params.voxel_leaf_size = loadDouble(
+    node, "preprocessing.voxel_leaf_size", "Voxel edge (m) used to thin each scan", 0.01, 2.0);
+
+  params.registration.max_correspondence_distance = loadDouble(
+    node, "registration.max_correspondence_distance",
+    "Point pairs farther apart (m) are not matched by ICP", 0.05, 10.0);
+  params.registration.max_iterations = static_cast<int>(loadInteger(
+      node, "registration.max_iterations", "Upper bound on ICP iterations per scan", 1, 200));
+  params.registration.transformation_epsilon = loadDouble(
+    node, "registration.transformation_epsilon",
+    "ICP stops when an iteration changes the pose less than this", 1e-12, 1.0);
+
+  params.local_map.keyframe_distance = loadDouble(
+    node, "local_map.keyframe_distance", "Travel (m) after which a scan becomes a keyframe",
+    0.1, 50.0);
+  params.local_map.keyframe_angle = loadDouble(
+    node, "local_map.keyframe_angle", "Rotation (rad) after which a scan becomes a keyframe",
+    0.01, 3.14);
+  params.local_map.max_keyframes = static_cast<std::size_t>(loadInteger(
+      node, "local_map.max_keyframes", "Recent keyframes the scans are aligned against", 1, 100));
+  params.local_map.voxel_leaf_size = loadDouble(
+    node, "local_map.voxel_leaf_size", "Voxel edge (m) used to thin the local map", 0.01, 2.0);
+
+  params.publish_filtered_cloud = declareOrGet<bool>(
+    node, "publish_filtered_cloud", described("Publish the preprocessed scan on ~/filtered_points"));
+
+  params.markers.trajectory_width = loadDouble(
+    node, "visualization.trajectory_width", "Width (m) of the trajectory line", 0.01, 2.0);
+  params.markers.trajectory_color = loadColor(
+    node, "visualization.trajectory_color", "Colour of the trajectory line");
+  params.markers.vehicle_length = loadDouble(
+    node, "visualization.vehicle_length", "Length (m) of the vehicle arrow", 0.1, 10.0);
+  params.markers.vehicle_width = loadDouble(
+    node, "visualization.vehicle_width", "Width (m) of the vehicle arrow", 0.01, 5.0);
+  params.markers.vehicle_color = loadColor(
+    node, "visualization.vehicle_color", "Colour of the vehicle arrow");
+
   return params;
 }
 

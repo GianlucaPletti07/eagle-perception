@@ -14,10 +14,11 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rcl_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(rcl_interfaces REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
@@ -45,9 +46,11 @@ target_include_directories(lidar_odometry_node SYSTEM PRIVATE
 )
 ament_target_dependencies(lidar_odometry_node
   rclcpp
+  rcl_interfaces
+  std_msgs
+  geometry_msgs
   sensor_msgs
   nav_msgs
-  geometry_msgs
   visualization_msgs
   tf2_ros
   tf2_eigen
@@ -66,6 +69,5 @@ install(TARGETS lidar_odometry_node
 install(DIRECTORY config launch rviz
   DESTINATION share/${PROJECT_NAME}
 )
-
 
 ament_package()
