@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Eigen/Geometry>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
+#include "Eigen/Geometry"
+#include "pcl/point_cloud.h"
+#include "pcl/point_types.h"
 
 namespace lidar_odometry
 {
@@ -13,8 +13,10 @@ using Cloud = pcl::PointCloud<PointT>;
 /// Part of the scan kept for registration. Distances in metres, in the vehicle frame.
 struct CropParameters
 {
-  double max_range;          ///< Horizontal distance from base_link beyond which points are dropped.
-  double ground_max_height;  ///< Points at or below this height are treated as ground.
+  /// Horizontal distance from base_link beyond which points are dropped.
+  double max_range;
+  /// Points at or below this height are treated as ground.
+  double ground_max_height;
 };
 
 /// Moves the scan into the vehicle frame and keeps only the points that help alignment:

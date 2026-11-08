@@ -3,8 +3,8 @@
 #include <chrono>
 #include <cstdint>
 
-#include <pcl_conversions/pcl_conversions.h>
-#include <tf2_eigen/tf2_eigen.hpp>
+#include "pcl_conversions/pcl_conversions.h"
+#include "tf2_eigen/tf2_eigen.hpp"
 
 #include "lidar_odometry/visualization.hpp"
 
@@ -22,7 +22,8 @@ double millisecondsBetween(Clock::time_point from, Clock::time_point to)
 
 /// Every output carries the time of the scan it came from, not the time it was computed.
 std_msgs::msg::Header stampedLike(
-  const std_msgs::msg::Header & scan_header, const std::string & frame)
+  const std_msgs::msg::Header & scan_header,
+  const std::string & frame)
 {
   std_msgs::msg::Header header;
   header.stamp = scan_header.stamp;
@@ -81,8 +82,9 @@ void LidarOdometryNode::createPublishers()
   odometry_publisher_ = create_publisher<nav_msgs::msg::Odometry>("odometry", output_qos);
   marker_publisher_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/markers", output_qos);
-  filtered_cloud_publisher_ =
-    create_publisher<sensor_msgs::msg::PointCloud2>("~/filtered_points", output_qos);
+  filtered_cloud_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+    "~/filtered_points",
+    output_qos);
   processing_time_publisher_ =
     create_publisher<lidar_odometry_msgs::msg::ProcessingTime>("~/processing_time", output_qos);
 

@@ -3,8 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <rcl_interfaces/msg/parameter_descriptor.hpp>
-#include <std_msgs/msg/color_rgba.hpp>
+#include "rcl_interfaces/msg/parameter_descriptor.hpp"
+#include "std_msgs/msg/color_rgba.hpp"
 
 namespace lidar_odometry
 {
@@ -49,7 +49,9 @@ ParameterDescriptor integerRange(const std::string & description, int64_t from, 
 /// Declares the parameter on the first call and reads its current value afterwards, so the
 /// same code sets the parameters up at startup and picks up changes made at runtime.
 template<typename T>
-T declareOrGet(rclcpp::Node & node, const std::string & name, const ParameterDescriptor & descriptor)
+T declareOrGet(
+  rclcpp::Node & node, const std::string & name,
+  const ParameterDescriptor & descriptor)
 {
   if (!node.has_parameter(name)) {
     return node.declare_parameter<T>(name, descriptor);
@@ -148,7 +150,8 @@ TunableParameters loadTunableParameters(rclcpp::Node & node)
     node, "local_map.voxel_leaf_size", "Voxel edge (m) used to thin the local map", 0.01, 2.0);
 
   params.publish_filtered_cloud = declareOrGet<bool>(
-    node, "publish_filtered_cloud", described("Publish the preprocessed scan on ~/filtered_points"));
+    node, "publish_filtered_cloud",
+    described("Publish the preprocessed scan on ~/filtered_points"));
 
   params.markers.trajectory_width = loadDouble(
     node, "visualization.trajectory_width", "Width (m) of the trajectory line", 0.01, 2.0);

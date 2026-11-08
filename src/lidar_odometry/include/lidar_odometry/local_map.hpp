@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <deque>
 
-#include <Eigen/Geometry>
+#include "Eigen/Geometry"
 
 #include "lidar_odometry/preprocessing.hpp"
 
@@ -12,10 +12,14 @@ namespace lidar_odometry
 
 struct LocalMapParameters
 {
-  double keyframe_distance;   ///< Travel in metres after which the current scan becomes a keyframe.
-  double keyframe_angle;      ///< Rotation in radians after which the current scan becomes a keyframe.
-  std::size_t max_keyframes;  ///< Older keyframes are dropped, bounding cost and memory.
-  double voxel_leaf_size;     ///< Leaf used to thin the merged keyframes.
+  /// Travel in metres after which the current scan becomes a keyframe.
+  double keyframe_distance;
+  /// Rotation in radians after which the current scan becomes a keyframe.
+  double keyframe_angle;
+  /// Older keyframes are dropped, bounding cost and memory.
+  std::size_t max_keyframes;
+  /// Leaf used to thin the merged keyframes.
+  double voxel_leaf_size;
 };
 
 /// Sliding window of the most recent keyframes, merged into one cloud in the odom frame.

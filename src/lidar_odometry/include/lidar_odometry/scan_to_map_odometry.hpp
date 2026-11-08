@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Eigen/Geometry>
-#include <pcl/registration/icp.h>
+#include "Eigen/Geometry"
+#include "pcl/registration/icp.h"
 
 #include "lidar_odometry/local_map.hpp"
 #include "lidar_odometry/preprocessing.hpp"
@@ -11,9 +11,12 @@ namespace lidar_odometry
 
 struct RegistrationParameters
 {
-  double max_correspondence_distance;  ///< Point pairs farther apart than this (m) are ignored.
-  int max_iterations;                  ///< Upper bound on ICP iterations per scan.
-  double transformation_epsilon;       ///< ICP stops once an iteration changes the pose less than this.
+  /// Point pairs farther apart than this (m) are ignored.
+  double max_correspondence_distance;
+  /// Upper bound on ICP iterations per scan.
+  int max_iterations;
+  /// ICP stops once an iteration changes the pose less than this.
+  double transformation_epsilon;
 };
 
 struct RegistrationResult
